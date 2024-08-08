@@ -1,8 +1,8 @@
 ﻿#include <iostream>
 #include <string>
 #include "it_file.h"
+#include "it_play.h"
 #include "WaveOut.h"
-
 
 #define SampleRate 48000
 #define wavlen (SampleRate/6)
@@ -10,9 +10,14 @@ WaveOut hwo(48000, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
 it_handle hit;
+it_pattern patTest;
 int main()
 {
-	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\goluigi_-_stream_disintegration.it");
+	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\laamaa_-_wb22-wk21.it");
+	
+	for (int i = 0; i < hit.itHead.patNum; ++i)
+		patTest.unpackPattern(&hit, i);
+
 	hwo.Start();
 	for (;;)
 	{
