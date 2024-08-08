@@ -10,13 +10,16 @@ WaveOut hwo(48000, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
 it_handle hit;
-it_pattern patTest;
+std::vector<it_pattern> patTest;
 int main()
 {
-	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\laamaa_-_wb22-wk21.it");
-	
+	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\goluigi_-_stream_disintegration.it");
+
+	patTest.resize(hit.itHead.patNum);
 	for (int i = 0; i < hit.itHead.patNum; ++i)
-		patTest.unpackPattern(&hit, i);
+	{
+		patTest[i].unpackPattern(&hit, i);
+	}
 
 	hwo.Start();
 	for (;;)
@@ -68,6 +71,12 @@ int main()
 				hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
 			}
 			printf("done.\n");
+		}
+		if (cmd == "pattern")
+		{
+			int patn, chn;
+			std::cin >> patn >> chn;
+			patTest[patn].printPatternInfo(chn);
 		}
 	}
 	return 0;
