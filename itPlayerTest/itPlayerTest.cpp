@@ -5,7 +5,7 @@
 #include "it_play.h"
 #include "WaveOut.h"
 
-#define wavlen (SampleRate/6)
+#define wavlen (SampleRate/12)
 WaveOut hwo(48000, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
@@ -47,7 +47,7 @@ int vk_note()
 }
 int main()
 {
-	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\goluigi_-_stream_disintegration.it");
+	itReadFromFile(&hit, "..\\test\\goluigi_-_stream_disintegration.it");
 
 	patTest.resize(hit.itHead.patNum);
 	for (int i = 0; i < hit.itHead.patNum; ++i)
@@ -66,10 +66,12 @@ int main()
 			int smpn;
 			std::cin >> smpn;
 			printf("playing smp%d...", smpn);
+			smpTest.setRelease();
 			smpTest.getSample(&hit, smpn);
+			for (int j = 0; j < 256; ++j)GetAsyncKeyState(j);//清空一下
 			for (;;)
 			{
-				smpTest.processBlock16Bit(bufl, bufr, wavlen / 2);
+				smpTest.processBlock(bufl, bufr, wavlen / 2);
 				for (int i = 0; i < wavlen; i += 2)
 				{
 					wavbuf[i + 0] = bufl[i / 2] * 32768;

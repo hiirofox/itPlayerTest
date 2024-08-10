@@ -27,6 +27,15 @@
     <ClCompile Include="it_play.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="it_pattern.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="it_sampler.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="it_instrument.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="it_file.h">
@@ -39,6 +48,15 @@
       <Filter>源文件</Filter>
     </ClInclude>
     <ClInclude Include="WaveOutDef.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="it_pattern.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="it_sampler.h">
+      <Filter>源文件</Filter>
+    </ClInclude>
+    <ClInclude Include="it_instrument.h">
       <Filter>源文件</Filter>
     </ClInclude>
   </ItemGroup>

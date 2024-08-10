@@ -129,12 +129,18 @@
   <ItemGroup>
     <ClCompile Include="itPlayerTest.cpp" />
     <ClCompile Include="it_file.cpp" />
+    <ClCompile Include="it_instrument.cpp" />
+    <ClCompile Include="it_pattern.cpp" />
     <ClCompile Include="it_play.cpp" />
+    <ClCompile Include="it_sampler.cpp" />
     <ClCompile Include="WaveOut.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="it_file.h" />
+    <ClInclude Include="it_instrument.h" />
+    <ClInclude Include="it_pattern.h" />
     <ClInclude Include="it_play.h" />
+    <ClInclude Include="it_sampler.h" />
     <ClInclude Include="WaveOut.h" />
     <ClInclude Include="WaveOutDef.h" />
   </ItemGroup>
