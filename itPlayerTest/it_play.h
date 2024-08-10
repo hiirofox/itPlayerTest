@@ -1,10 +1,11 @@
 #pragma once
 
 #include <stdint.h>
+#include <math.h>
 #include <iostream>
 #include <vector>
 #include "it_file.h"
-
+#include "WaveOutDef.h"
 #define MaxChannel 64
 
 std::string noteToString(int note);
@@ -14,7 +15,8 @@ typedef struct IT_PATTERN_UNIT
 	int16_t row;
 	int8_t note;
 	int8_t instrument;
-	int8_t volume;
+	int8_t vol;
+	int8_t volCmd;//逆天it之vol还包含声像控制
 	int8_t cmd;
 	int8_t cmdValue;
 	bool isNoteChange;
@@ -68,23 +70,24 @@ public:
 				uint8_t chn = (chnMask - 1) & 63;
 				if (chnMask & (1 << 7)) lastMask[chn] = pdat[pos++];
 
-				if (lastMask[chn] & (1 << 0)) lastNote[chn] = pdat[pos++];
-				if (lastMask[chn] & (1 << 4)) isNoteChange = 1;
+				if (lastMask[chn] & (1 << 0)) lastNote[chn] = pdat[pos++], isNoteChange = 1;
+				else if (lastMask[chn] & (1 << 4)) isNoteChange = 0;
 
-				if (lastMask[chn] & (1 << 1)) lastInstrument[chn] = pdat[pos++];
-				if (lastMask[chn] & (1 << 5)) isInsChange = 1;
+				if (lastMask[chn] & (1 << 1)) lastInstrument[chn] = pdat[pos++], isInsChange = 1;
+				else if (lastMask[chn] & (1 << 5)) isInsChange = 0;
 
-				if (lastMask[chn] & (1 << 2)) lastVolume[chn] = pdat[pos++];
-				if (lastMask[chn] & (1 << 6)) isVolChange = 1;
+				if (lastMask[chn] & (1 << 2)) lastVolume[chn] = pdat[pos++], isVolChange = 1;
+				else if (lastMask[chn] & (1 << 6)) isVolChange = 0;
 
 				if (lastMask[chn] & (1 << 3))
 				{
 					lastCmd[chn] = pdat[pos++];
 					lastCmdValue[chn] = pdat[pos++];
-				}
-				if (lastMask[chn] & (1 << 7))
-				{
 					isCmdChange = 1;
+				}
+				else if (lastMask[chn] & (1 << 7))
+				{
+					isCmdChange = 0;
 				}
 				chnMask = pdat[pos++];
 
@@ -94,7 +97,23 @@ public:
 				tmp.isNoteChange = isNoteChange;
 				tmp.instrument = lastInstrument[chn];
 				tmp.isInsChange = isInsChange;
-				tmp.volume = lastVolume[chn];
+
+				uint8_t vol = lastVolume[chn];
+				char volcmd = 'v';
+				if (vol > 64)//逆天it之vol还包各种指令
+				{
+					if (vol < 75)						volcmd = 'a', vol -= 65;
+					else if (vol < 85)					volcmd = 'b', vol -= 75;
+					else if (vol < 95)					volcmd = 'c', vol -= 85;
+					else if (vol < 105)					volcmd = 'd', vol -= 95;
+					else if (vol < 115)					volcmd = 'e', vol -= 105;
+					else if (vol < 125)					volcmd = 'f', vol -= 115;
+					else if (vol < 193)					volcmd = 'p', vol -= 128;
+					else if (vol < 203)					volcmd = 'g', vol -= 193;
+				}
+				tmp.vol = vol;
+				tmp.volCmd = volcmd;
+
 				tmp.isVolChange = isVolChange;
 				tmp.cmd = lastCmd[chn];
 				tmp.cmdValue = lastCmdValue[chn];
@@ -121,28 +140,29 @@ public:
 		{
 			printf("row:%3d mask:%d,%d,%d,%d | ", unit.row, unit.isNoteChange, unit.isInsChange, unit.isVolChange, unit.isCmdChange);
 
-			if (!unit.isNoteChange)//note
+			if (unit.isNoteChange)//note
 			{
-				if (unit.note == 255)printf("=== ");
-				else if (unit.note == 254)printf("^^  ");
+				if ((uint8_t)unit.note == 255)printf("=== ");
+				else if ((uint8_t)unit.note == 254)printf("^^  ");
 				else if (unit.note >= 0 && unit.note <= 199) printf("%s ", noteToString(unit.note).c_str());
-				else printf("??? ");
 			}
 			else printf("... ");
 
-			if (!unit.isInsChange)//instrument
+			if (unit.isInsChange)//instrument
 			{
 				printf("%02d ", unit.instrument);
 			}
 			else printf(".. ");
 
-			if (!unit.isVolChange)//volume
+			if (unit.isVolChange)//volume
 			{
-				printf("v%02d ", unit.volume);
+				char volcmd = 'v';
+				uint8_t vol = unit.vol;
+				printf("%c%02d ", volcmd, vol);
 			}
 			else printf("... ");
 
-			if (!unit.isCmdChange)//cmd
+			if (unit.isCmdChange)//cmd
 			{
 				printf("%c%02X ", unit.cmd + 64, (uint8_t)unit.cmdValue);
 			}
@@ -152,6 +172,128 @@ public:
 		}
 	}
 };
+
+class it_sampler
+{
+private:
+	ItSample::it_sample_head* smpHead;
+	ItSample::it_sample_data* smpData;
+	float pos, speed;
+	bool isNoteOn = 0;
+	bool isIntoLoop = 0;	//在各种loop里了
+	int loopMode;			//loop模式 0:off 1:on 2:bidi
+	int loopState;
+public:
+	it_sampler()
+	{
+	}
+	void getSample(it_handle* hit, int sampleNum)
+	{
+		smpHead = &hit->itSampleHead[sampleNum - 1];
+		smpData = &hit->itSampleData[sampleNum - 1];
+	}
+	void resetNote()
+	{
+		pos = 0;
+		isNoteOn = 1;
+	}
+	void setNoteOn()
+	{
+		if (isNoteOn == 0)
+		{
+			pos = 0;
+			isNoteOn = 1;
+		}
+	}
+	void setRelease()
+	{
+		isNoteOn = 0;
+	}
+	void setPitch(float note)
+	{
+		speed = powf(2.0, note / 12.0);
+		speed *= (float)smpHead->C5Speed / SampleRate;
+		printf("speed:%.5f\n", speed);
+	}
+	void processBlock16Bit(int16_t* outl, int16_t* outr, int length)//test
+	{
+		int sampleLen = smpHead->sampleLen;
+		int16_t* datl = (int16_t*)smpData->sampleData;
+		int16_t* datr;
+		if (smpHead->isStereo) datr = (int16_t*)smpData->sampleData + sampleLen;
+		else datr = (int16_t*)smpData->sampleData;
+
+		int loopLow, loopHigh, loopMode;
+		if (isNoteOn && smpHead->isUseSustainLoop)//因为，反正总是只有一个loop在工作。
+		{
+			loopLow = smpHead->sustainLoopBegining;
+			loopHigh = smpHead->sustainLoopEnd;
+			loopMode = smpHead->sustainLoopMode;
+			//if (!smpHead->isUseSustainLoop)loopMode = -1;
+		}
+		else
+		{
+			loopLow = smpHead->loopBegining;
+			loopHigh = smpHead->loopEnd;
+			loopMode = smpHead->loopMode;
+			if (!smpHead->isUseLoop)loopMode = -1;
+		}
+		int i = 0;
+		for (; i < length && pos < sampleLen; ++i)
+		{
+			outl[i] = datl[(int)pos];
+			outr[i] = datr[(int)pos];
+
+			if (isIntoLoop)//如果是在循环里面，考虑的事情就很多了
+			{
+				if (loopMode == 0)//on是到头就重来
+				{
+					pos += speed;
+					if (pos >= loopHigh) pos = loopLow;
+				}
+				else if (loopMode == 1)//bidi是来回
+				{
+					if (loopState == 1)			pos -= speed;//回头
+					else						pos += speed;
+
+					if (pos >= loopHigh)		pos -= speed, loopState = 1;
+					else if (pos <= loopLow)	pos += speed, loopState = 2;
+				}
+				else//其他就当作没有
+				{
+					pos += speed;
+				}
+			}
+			else//如果不在循环里面就直接前进就好了
+			{
+				if (pos >= loopLow - speed && pos <= loopHigh + speed)//两边那个-speed和+speed为了防止跑飞
+				{
+					isIntoLoop = 1;
+				}
+				pos += speed;
+			}
+		}
+		for (; i < length; ++i)//零填充，如果pos比i提前爆了的话
+		{
+			outl[i] = 0;
+			outr[i] = 0;
+		}
+		//printf("pos:%.5f\n", pos);
+	}
+};
+class tracker_instrument
+{
+private:
+public:
+};
+class it_instrument :public tracker_instrument
+{
+private:
+public:
+};
+
 class it_player
 {
+private:
+public:
 };

@@ -1,16 +1,50 @@
-﻿#include <iostream>
+﻿#include <Windows.h>
+#include <iostream>
 #include <string>
 #include "it_file.h"
 #include "it_play.h"
 #include "WaveOut.h"
 
-#define SampleRate 48000
 #define wavlen (SampleRate/6)
 WaveOut hwo(48000, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
 it_handle hit;
 std::vector<it_pattern> patTest;
+it_sampler smpTest;
+int16_t bufl[wavlen / 2];
+int16_t bufr[wavlen / 2];
+
+int vk_note()
+{
+	if (GetAsyncKeyState('Z'))return 0;
+	if (GetAsyncKeyState('S'))return 1;
+	if (GetAsyncKeyState('X'))return 2;
+	if (GetAsyncKeyState('D'))return 3;
+	if (GetAsyncKeyState('C'))return 4;
+	if (GetAsyncKeyState('V'))return 5;
+	if (GetAsyncKeyState('G'))return 6;
+	if (GetAsyncKeyState('B'))return 7;
+	if (GetAsyncKeyState('H'))return 8;
+	if (GetAsyncKeyState('N'))return 9;
+	if (GetAsyncKeyState('J'))return 10;
+	if (GetAsyncKeyState('M'))return 11;
+	if (GetAsyncKeyState('Q'))return 12;
+	if (GetAsyncKeyState('2'))return 13;
+	if (GetAsyncKeyState('W'))return 14;
+	if (GetAsyncKeyState('3'))return 15;
+	if (GetAsyncKeyState('E'))return 16;
+	if (GetAsyncKeyState('R'))return 17;
+	if (GetAsyncKeyState('5'))return 18;
+	if (GetAsyncKeyState('T'))return 19;
+	if (GetAsyncKeyState('6'))return 20;
+	if (GetAsyncKeyState('Y'))return 21;
+	if (GetAsyncKeyState('7'))return 22;
+	if (GetAsyncKeyState('U'))return 23;
+	if (GetAsyncKeyState('I'))return 24;
+	if (GetAsyncKeyState(VK_ESCAPE))return -1;
+	return -2;
+}
 int main()
 {
 	itReadFromFile(&hit, "D:\\JuceProject\\itPlayerTest\\Test\\goluigi_-_stream_disintegration.it");
@@ -32,41 +66,22 @@ int main()
 			int smpn;
 			std::cin >> smpn;
 			printf("playing smp%d...", smpn);
-			int smpLen = hit.itSampleHead[smpn - 1].sampleLen;
-			int isStereo = hit.itSampleHead[smpn - 1].isStereo;
-			int is16Bit = hit.itSampleHead[smpn - 1].is16Bit;
-			if (isStereo) smpLen /= 2;
-
-			void* smpbuf = hit.itSampleData[smpn - 1].sampleData;
-			for (int pos = 0; pos < smpLen;)
+			smpTest.getSample(&hit, smpn);
+			for (;;)
 			{
+				smpTest.processBlock16Bit(bufl, bufr, wavlen / 2);
 				for (int i = 0; i < wavlen; i += 2)
 				{
-					int32_t datl, datr;
-					if (is16Bit)
-					{
-						datl = ((int16_t*)smpbuf)[pos];
-						if (isStereo)	datr = ((int16_t*)smpbuf)[pos + smpLen];
-						else			datr = datl;
-						datl *= 32768;
-						datr *= 32768;
-					}
-					else
-					{
-						datl = ((int8_t*)smpbuf)[pos];
-						if (isStereo)	datr = ((int16_t*)smpbuf)[pos + smpLen];
-						else			datr = datl;
-						datl *= 32768 * 256;
-						datr *= 32768 * 256;
-					}
-					wavbuf[i + 0] = datl;
-					wavbuf[i + 1] = datr;
-					pos++;
-					if (pos >= smpLen)
-					{
-						for (; i < wavlen; ++i)wavbuf[i] = 0;
-						break;
-					}
+					wavbuf[i + 0] = bufl[i / 2] * 32768;
+					wavbuf[i + 1] = bufr[i / 2] * 32768;
+				}
+				int key = vk_note();
+				if (key == -1) break;
+				else if (key == -2) smpTest.setRelease();
+				else
+				{
+					smpTest.setPitch(key);
+					smpTest.setNoteOn();
 				}
 				hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
 			}
