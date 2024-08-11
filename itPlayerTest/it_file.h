@@ -72,7 +72,13 @@ namespace ItInstrument
 
 	typedef struct IT_ENVELOPE
 	{
-		uint8_t		flag;
+		//uint8_t		flag;
+		bool		isUseEnve : 1;
+		bool		isUseLoop : 1;
+		bool		isUseSustainLoop : 1;
+		uint8_t		flag : 4;
+		bool		isUseFilter : 1;//filter和pitch二选一
+
 		uint8_t		nodeCount;
 		uint8_t		loopBegining;
 		uint8_t		loopEnd;

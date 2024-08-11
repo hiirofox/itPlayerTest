@@ -12,6 +12,7 @@ int32_t wavbuf[wavlen];
 it_handle hit;
 std::vector<it_pattern> patTest;
 it_sampler smpTest;
+it_instrument insTest;
 int16_t bufl[wavlen / 2];
 int16_t bufr[wavlen / 2];
 
@@ -84,6 +85,34 @@ int main()
 				{
 					smpTest.setPitch(key);
 					smpTest.setNoteOn();
+				}
+				hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
+			}
+			printf("done.\n");
+		}
+		if (cmd == "playins")
+		{
+			int insN;
+			std::cin >> insN;
+			printf("playing ins%d...\n", insN);
+			insTest.setRelease();
+			insTest.getInstrument(&hit, insN);
+			for (int j = 0; j < 256; ++j)GetAsyncKeyState(j);//清空一下
+			for (;;)
+			{
+				insTest.processBlock(bufl, bufr, wavlen / 2);
+				for (int i = 0; i < wavlen; i += 2)
+				{
+					wavbuf[i + 0] = bufl[i / 2] * 32768;
+					wavbuf[i + 1] = bufr[i / 2] * 32768;
+				}
+				int key = vk_note();
+				if (key == -1) break;
+				else if (key == -2) insTest.setRelease();
+				else
+				{
+					insTest.setPitch(key);
+					insTest.setNoteOn();
 				}
 				hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
 			}

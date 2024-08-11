@@ -4,6 +4,15 @@
 template<typename sample_type>
 void it_sampler::processBlockAnyType(int16_t* outl, int16_t* outr, int length)//test
 {
+	if (isMute)//如果要静音的话
+	{
+		for (int i = 0; i < length; ++i)
+		{
+			outl[i] = 0;
+			outr[i] = 0;
+		}
+		return;
+	}
 	int sampleLen = smpHead->sampleLen;
 	sample_type* datl = (sample_type*)smpData->sampleData;
 	sample_type* datr;
@@ -79,10 +88,21 @@ it_sampler::it_sampler()
 
 }
 
-void it_sampler::getSample(it_handle* hit, int sampleNum)
+int it_sampler::getSample(it_handle* hit, int sampleNum)
 {
+	if (sampleNum <= 0)
+	{
+		isMute = 1;
+		return -1;
+	}
+	else isMute = 0;
 	smpHead = &hit->itSampleHead[sampleNum - 1];
 	smpData = &hit->itSampleData[sampleNum - 1];
+	if (smpHead == NULL || smpData == NULL)
+	{
+		isMute = 1;
+		return -1;
+	}
 }
 void it_sampler::resetNote()
 {
@@ -93,8 +113,7 @@ void it_sampler::setNoteOn()
 {
 	if (isNoteOn == 0)
 	{
-		pos = 0;
-		isNoteOn = 1;
+		resetNote();
 	}
 }
 void it_sampler::setRelease()
