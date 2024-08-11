@@ -88,7 +88,7 @@ it_sampler::it_sampler()
 
 }
 
-int it_sampler::getSample(it_handle* hit, int sampleNum)
+int it_sampler::setSample(it_handle* hit, int sampleNum)
 {
 	if (sampleNum <= 0)
 	{

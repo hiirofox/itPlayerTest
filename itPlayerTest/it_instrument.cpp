@@ -7,13 +7,14 @@ it_instrument::it_instrument()
 
 void it_instrument::resetNote()
 {
-	printf("reset ins\n");
+	//printf("reset ins\n");
 	isNoteOn = 1;
-	tickPos = 0;
-	volNodeN = 0, panNodeN = 0, pitchNodeN = 0;//包络nodeN全弄0了
-	if (sampler.getSample(hit, kbTable[initNote]) == -1) isSampleOK = 0;
+	if (sampler.setSample(hit, kbTable[initNote]) == -1) isSampleOK = 0;
 	else isSampleOK = 1;
 	sampler.resetNote();
+	volEnve.resetNote();
+	panEnve.resetNote();
+	pitchEnve.resetNote();
 }
 
 void it_instrument::setNoteOn()
@@ -28,6 +29,9 @@ void it_instrument::setRelease()
 {
 	//printf("release\n");
 	isNoteOn = 0;
+	volEnve.setRelease();
+	panEnve.setRelease();
+	pitchEnve.setRelease();
 }
 
 void it_instrument::setPitch(float note)
@@ -36,7 +40,7 @@ void it_instrument::setPitch(float note)
 	this->note = note;
 }
 
-void it_instrument::getInstrument(it_handle* hit, int instrumentNum)
+void it_instrument::setInstrument(it_handle* hit, int instrumentNum)
 {
 	this->hit = hit;
 	ins = &hit->itInstruments[instrumentNum - 1];
@@ -45,68 +49,159 @@ void it_instrument::getInstrument(it_handle* hit, int instrumentNum)
 	{
 		kbTable[ins->kbTable[i].note] = ins->kbTable[i].sample;
 	}
-	printf("useEnve:%s useLoop:%s loopSusLoop:%s\n",
-		ins->envelope.isUseEnve ? "true " : "false",
-		ins->envelope.isUseLoop ? "true " : "false",
-		ins->envelope.isUseSustainLoop ? "true " : "false");
-	printf("loopBeg:%d loopEnd:%d\n", ins->envelope.loopBegining, ins->envelope.loopEnd);
-	printf("susLoopBeg:%d susLoopEnd:%d\n", ins->envelope.sustainLoopBegining, ins->envelope.sustainLoopEnd);
+
+	volEnve.setEnvelope(&ins->volEnve);
+	panEnve.setEnvelope(&ins->panEnve);
+	pitchEnve.setEnvelope(&ins->pitchEnve);
 
 }
 
 void it_instrument::processBlock(int16_t* outl, int16_t* outr, int length)
 {//我先不管那么多，把每个block当成一个tick，后边track就要考虑很多了
 
-	if (tickPos >= ins->envelope.volNode[volNodeN].tickPos && volNodeN < ins->envelope.nodeCount)
-	{
-		printf("volNode:%d nodeCount:%d\n", volNodeN, ins->envelope.nodeCount);
-		int nextVolNodeN;
-		if (ins->envelope.isUseSustainLoop && isNoteOn)
-		{
-			if (volNodeN == ins->envelope.sustainLoopEnd)
-			{
-				nextVolNodeN = ins->envelope.sustainLoopBegining;
-				volNodeN = ins->envelope.sustainLoopBegining;
-				tickPos = ins->envelope.volNode[volNodeN].tickPos;
-			}
-			else nextVolNodeN = volNodeN + 1;
-		}
-		else if (ins->envelope.isUseLoop)
-		{
-			if (volNodeN == ins->envelope.loopEnd)
-			{
-				nextVolNodeN = ins->envelope.loopBegining;
-				volNodeN = ins->envelope.loopBegining;
-				tickPos = ins->envelope.volNode[volNodeN].tickPos;
-			}
-			else nextVolNodeN = volNodeN + 1;
-		}
-		else nextVolNodeN = volNodeN + 1;
+	volEnve.updata();
+	panEnve.updata();
+	pitchEnve.updata();
+	bool isUseVolEnve = ins->volEnve.isUseEnve;
+	bool isUsePanEnve = ins->panEnve.isUseEnve;
+	bool isUsePitchEnve = ins->pitchEnve.isUseEnve;
 
-		vol = ins->envelope.volNode[volNodeN].yPos;
-
-		if (volNodeN == nextVolNodeN)volK = 0;
-		else {
-			volK = (ins->envelope.volNode[nextVolNodeN].yPos - ins->envelope.volNode[volNodeN].yPos) /
-				(ins->envelope.volNode[nextVolNodeN].tickPos - ins->envelope.volNode[volNodeN].tickPos);
-		}
-		volNodeN = nextVolNodeN;
-	}
+	float vol = volEnve.getYPos();
+	float volK = volEnve.getYPosK();
+	float pan = panEnve.getYPos();
+	float panK = panEnve.getYPosK();
+	float pitch = pitchEnve.getYPos();
+	bool isUseFilter = ins->pitchEnve.isUseFilter;
 
 	if (isSampleOK)
 	{
-		sampler.setPitch(note);//更新一下pitch
+		if (!isUseFilter)	sampler.setPitch(note + pitch / 2);//更新一下pitch
+		else				sampler.setPitch(note);
 		sampler.processBlock(outl, outr, length);//拿一下采样
 	}
+	//printf("vol:%2.5f volk:%2.5f\n", vol, volK);
+	printf("pitch:%.5f\n", pitch);
 
-	float volume = vol / 64.0;
-	float volk2 = volK / length;
+	float vol2 = vol / 64.0;
+	float volk2 = volK / length / 128.0;
+	float pan2 = pan / 32.0;
+	float panK2 = panK / length / 32.0;
+	if (!isUseVolEnve)vol2 = 1.0, volk2 = 0;
+	if (!isUsePanEnve)pan2 = 0.0, panK2 = 0;
 	for (int i = 0; i < length; ++i)//处理音量包络
 	{
-		outl[i] *= volume;
-		outr[i] *= volume;
-		vol += volk2;
+		outl[i] *= vol2 * (1.0 - pan2) * 0.5;
+		outr[i] *= vol2 * (1.0 + pan2) * 0.5;
+		vol2 += volk2;
+		pan2 += panK2;
 	}
 
-	if (volNodeN < ins->envelope.nodeCount)tickPos++;
+}
+
+/// 
+/// class envelope :
+/// 
+
+
+void it_envelope::resetNote()
+{
+	isNoteOn = 1;
+	tickPos = 0;
+	nodeN = 0;
+}
+
+void it_envelope::setNoteOn()
+{
+	if (isNoteOn == 0)
+	{
+		resetNote();
+	}
+}
+
+void it_envelope::setRelease()
+{
+	isNoteOn = 0;
+}
+
+void it_envelope::updata()
+{
+	yPos += yPosK;
+	if (tickPos >= env->nodes[nodeN].tickPos && nodeN < env->nodeCount)
+	{
+		yPos = env->nodes[nodeN].yPos;
+		nodeN++;
+		if (env->isUseSustainLoop && isNoteOn)
+		{
+			if (nodeN == env->sustainLoopEnd + 1)//碰底了要回去了
+			{
+				nodeN = env->sustainLoopBegining;
+				tickPos = env->nodes[nodeN].tickPos;
+				yPos = env->nodes[nodeN].yPos;
+			}
+			else
+			{
+				yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
+					(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
+			}
+		}
+		else if (env->isUseLoop)
+		{
+			if (nodeN == env->loopEnd + 1)//碰底了要回去了
+			{
+				nodeN = env->loopBegining;
+				tickPos = env->nodes[nodeN].tickPos;
+				yPos = env->nodes[nodeN].yPos;
+			}
+			else
+			{
+				yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
+					(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
+			}
+		}
+		else
+		{
+			yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
+				(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
+		}
+	}
+	else if (nodeN >= env->nodeCount)
+	{
+		yPos = env->nodes[nodeN-1].yPos;
+		yPosK = 0;
+	}
+	if (nodeN < env->nodeCount)tickPos++;
+}
+
+void it_envelope::setEnvelope(ItInstrument::it_envelope* env)
+{
+	this->env = env;
+	printf("\nisUseEnv:%s isUseLoop:%s isUseSusLoop:%s nodesNum:%2d\n",
+		env->isUseEnve ? "true " : "false",
+		env->isUseLoop ? "true " : "false",
+		env->isUseSustainLoop ? "true " : "false",
+		env->nodeCount);
+	printf("loopStart:%3d,loopEnd:%3d,susLoopStart:%3d,susLoopEnd:%3d\n",
+		env->loopBegining,
+		env->loopEnd,
+		env->sustainLoopBegining,
+		env->sustainLoopEnd);
+	for (int i = 0; i < env->nodeCount; ++i)
+	{
+		printf("-nodeNum%3d: Y:%3d , Tick:%3d\n", i, env->nodes[i].yPos, env->nodes[i].tickPos);
+	}
+}
+
+float it_envelope::getYPos()
+{
+	return yPos;
+}
+
+float it_envelope::getYPosK()
+{
+	return yPosK;
+}
+
+int it_envelope::getNodeN()
+{
+	return nodeN;
 }

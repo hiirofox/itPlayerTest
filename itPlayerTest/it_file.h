@@ -76,17 +76,19 @@ namespace ItInstrument
 		bool		isUseEnve : 1;
 		bool		isUseLoop : 1;
 		bool		isUseSustainLoop : 1;
-		uint8_t		flag : 4;
-		bool		isUseFilter : 1;//filter和pitch二选一
+		bool		rs1 : 1;
+		bool		rs2 : 1;
+		bool		rs3 : 1;
+		bool		rs4 : 1;
+		bool		isUseFilter : 1;//filter和pitch二选一(pitchEnve有效)
 
 		uint8_t		nodeCount;
 		uint8_t		loopBegining;
 		uint8_t		loopEnd;
 		uint8_t		sustainLoopBegining;
 		uint8_t		sustainLoopEnd;
-		it_node_points  volNode[25];
-		it_node_points	panNode[25];
-		it_node_points	pitchNode[25];
+		it_node_points  nodes[25];
+		char		reserved3[1];
 	}it_envelope;
 
 	typedef struct IT_INSTRUMENT
@@ -114,8 +116,9 @@ namespace ItInstrument
 		uint8_t		midiProgram;
 		uint16_t	midiBank;
 		it_keyborad_table kbTable[120];
-		it_envelope envelope;
-		char		reserved3[4];
+		it_envelope volEnve;
+		it_envelope panEnve;
+		it_envelope pitchEnve;
 	}it_instrument;
 }
 

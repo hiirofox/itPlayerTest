@@ -21,7 +21,7 @@ private:
 	template<typename sample_type> void processBlockAnyType(int16_t* outl, int16_t* outr, int length);
 public:
 	it_sampler();
-	int getSample(it_handle* hit, int sampleNum);
+	int setSample(it_handle* hit, int sampleNum);
 	void resetNote();
 	void setNoteOn();
 	void setRelease();

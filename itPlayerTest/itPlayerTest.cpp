@@ -5,7 +5,7 @@
 #include "it_play.h"
 #include "WaveOut.h"
 
-#define wavlen (SampleRate/12)
+#define wavlen (SampleRate/16)
 WaveOut hwo(48000, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
@@ -68,7 +68,7 @@ int main()
 			std::cin >> smpn;
 			printf("playing smp%d...", smpn);
 			smpTest.setRelease();
-			smpTest.getSample(&hit, smpn);
+			smpTest.setSample(&hit, smpn);
 			for (int j = 0; j < 256; ++j)GetAsyncKeyState(j);//清空一下
 			for (;;)
 			{
@@ -96,7 +96,7 @@ int main()
 			std::cin >> insN;
 			printf("playing ins%d...\n", insN);
 			insTest.setRelease();
-			insTest.getInstrument(&hit, insN);
+			insTest.setInstrument(&hit, insN);
 			for (int j = 0; j < 256; ++j)GetAsyncKeyState(j);//清空一下
 			for (;;)
 			{

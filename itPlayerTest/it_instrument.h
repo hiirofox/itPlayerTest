@@ -8,6 +8,26 @@
 
 #define TickToSampleNum(tempo) (2.5 / tempo * SampleRate) //计算一个tick的采样数
 
+
+class it_envelope//诶呀it放我一马
+{
+private:
+	ItInstrument::it_envelope* env;
+	int tickPos;
+	int nodeN;
+	bool isNoteOn;
+	float yPos, yPosK;
+public:
+	void setEnvelope(ItInstrument::it_envelope* env);
+	void resetNote();
+	void setNoteOn();
+	void setRelease();
+	void updata();
+	float getYPos();
+	float getYPosK();
+	int getNodeN();
+};
+
 class tracker_instrument
 {
 private:
@@ -22,18 +42,18 @@ private:
 	ItInstrument::it_instrument* ins;
 	uint8_t kbTable[256];
 	int initNote;//起始音符
-	float note;
-	int tickPos;
-	int volNodeN, panNodeN, pitchNodeN;
-	float vol, pan, pitch;//3个包络的值(filter是和pitch共用一个包络)
-	float volK, panK, pitchK;//3个包络值的斜率
+	float note;//用来调Pitch的
 	bool isNoteOn = 0;
+
+	it_envelope volEnve;
+	it_envelope panEnve;
+	it_envelope pitchEnve;
 public:
 	it_instrument();
 	void resetNote();
 	void setNoteOn();
 	void setRelease();
 	void setPitch(float note);
-	void getInstrument(it_handle* hit, int instrumentNum);
+	void setInstrument(it_handle* hit, int instrumentNum);
 	void processBlock(int16_t* outl, int16_t* outr, int length);
 };

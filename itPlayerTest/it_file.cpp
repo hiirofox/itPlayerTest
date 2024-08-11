@@ -39,7 +39,13 @@ int itReadFromFile(it_handle* hit, const char* fileName)
 	{
 		fseek(pfr, hit->itHeadData.insOffsets[i], SEEK_SET);
 		fread(&hit->itInstruments[i], sizeof(it_instrument), 1, pfr);
-		printf("ins%02d impi:%.4s envNodeN:%d name:%s\n", i + 1, hit->itInstruments[i].IMPI, hit->itInstruments[i].envelope.nodeCount, hit->itInstruments[i].instrumentName);
+		//fseek(pfr, hit->itHeadData.insOffsets[i] + 0x130, SEEK_SET);
+		//fread(&hit->itInstruments[i].volEnve, sizeof(it_envelope), 1, pfr);
+		//fseek(pfr, hit->itHeadData.insOffsets[i] + 0x182, SEEK_SET);
+		//fread(&hit->itInstruments[i].panEnve, sizeof(it_envelope), 1, pfr);
+		//fseek(pfr, hit->itHeadData.insOffsets[i] + 0x1d4, SEEK_SET);
+		//fread(&hit->itInstruments[i].pitchEnve, sizeof(it_envelope), 1, pfr);
+		printf("ins%02d impi:%.4s name:%s\n", i + 1, hit->itInstruments[i].IMPI, hit->itInstruments[i].instrumentName);
 	}
 
 	hit->itSampleHead = (it_sample_head*)malloc(sizeof(it_sample_head) * hit->itHead.smpNum);
