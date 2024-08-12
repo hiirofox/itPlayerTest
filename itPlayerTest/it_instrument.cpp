@@ -80,7 +80,7 @@ void it_instrument::processBlock(int16_t* outl, int16_t* outr, int length)
 		sampler.processBlock(outl, outr, length);//拿一下采样
 	}
 	//printf("vol:%2.5f volk:%2.5f\n", vol, volK);
-	printf("pitch:%.5f\n", pitch);
+	printf("pitch:%.5f %.5f\n", pitchEnve.getYPos(), pitchEnve.getYPosK());
 
 	float vol2 = vol / 64.0;
 	float volk2 = volK / length / 128.0;
@@ -128,45 +128,41 @@ void it_envelope::updata()
 	yPos += yPosK;
 	if (tickPos >= env->nodes[nodeN].tickPos && nodeN < env->nodeCount)
 	{
-		yPos = env->nodes[nodeN].yPos;
-		nodeN++;
+		int nextNodeN = nodeN + 1, isBack = 0;
 		if (env->isUseSustainLoop && isNoteOn)
 		{
-			if (nodeN == env->sustainLoopEnd + 1)//碰底了要回去了
+			if (nodeN == env->sustainLoopEnd)//碰底了要回去了
 			{
-				nodeN = env->sustainLoopBegining;
-				tickPos = env->nodes[nodeN].tickPos;
-				yPos = env->nodes[nodeN].yPos;
-			}
-			else
-			{
-				yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
-					(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
+				nextNodeN = env->sustainLoopBegining;
+				tickPos = env->nodes[nextNodeN].tickPos;
+				isBack = 1;
 			}
 		}
 		else if (env->isUseLoop)
 		{
-			if (nodeN == env->loopEnd + 1)//碰底了要回去了
+			if (nodeN == env->loopEnd)//碰底了要回去了
 			{
-				nodeN = env->loopBegining;
-				tickPos = env->nodes[nodeN].tickPos;
-				yPos = env->nodes[nodeN].yPos;
+				nextNodeN = env->loopBegining;
+				tickPos = env->nodes[nextNodeN].tickPos;
+				isBack = 1;
 			}
-			else
-			{
-				yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
-					(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
-			}
+		}
+		if (isBack)//如果有要回去的
+		{
+			yPos = env->nodes[nextNodeN].yPos;
+			yPosK = 0;
+			nodeN = nextNodeN;
 		}
 		else
 		{
-			yPosK = (float)(env->nodes[nodeN].yPos - env->nodes[nodeN - 1].yPos) /
-				(env->nodes[nodeN].tickPos - env->nodes[nodeN - 1].tickPos);
+			yPos = env->nodes[nodeN].yPos;
+			yPosK = (float)(env->nodes[nextNodeN].yPos - env->nodes[nodeN].yPos) / (env->nodes[nextNodeN].tickPos - env->nodes[nodeN].tickPos);
+			nodeN = nextNodeN;
 		}
 	}
 	else if (nodeN >= env->nodeCount)
 	{
-		yPos = env->nodes[nodeN-1].yPos;
+		yPos = env->nodes[nodeN - 1].yPos;
 		yPosK = 0;
 	}
 	if (nodeN < env->nodeCount)tickPos++;
