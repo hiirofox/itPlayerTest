@@ -52,6 +52,7 @@ private:
 	uint8_t kbTable[256];
 	float note;//用来调Pitch的
 	bool isNoteOn = 0;
+	bool isUnUse;//不使用
 
 	it_envelope volEnve;
 	it_envelope panEnve;
@@ -60,12 +61,17 @@ private:
 	it_filter filtL, filtR;
 	float ctof, reso;
 	void setFilterParam(int ctof, int reso);//ctof:0-127(ZXX效果器) reso:0-127
+
+	float volume;
 public:
 	it_instrument();
 	void resetNote();
 	void setNoteOn();
-	void setRelease();
+	void setRelease();//===
+	void setNoteCut();//^^ 
+	void setUnUse(bool isUnUse);
 	void setPitch(float note);
+	void setVolume(float volume);//0->64
 	void setInstrument(it_handle* hit, int instrumentNum);
-	void processBlock(int16_t* outl, int16_t* outr, int length);
+	void processBlock(float* outl, float* outr, int length);
 };

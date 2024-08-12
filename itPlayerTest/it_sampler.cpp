@@ -2,7 +2,7 @@
 
 
 template<typename sample_type>
-void it_sampler::processBlockAnyType(int16_t* outl, int16_t* outr, int length)//test
+void it_sampler::processBlockAnyType(float* outl, float* outr, int length)//test
 {
 	if (isMute)//如果要静音的话
 	{
@@ -127,7 +127,12 @@ void it_sampler::setPitch(float note)
 	//printf("speed:%.5f\n", speed);
 }
 
-void it_sampler::processBlock(int16_t* outl, int16_t* outr, int length)
+void it_sampler::setMute(bool isMute)
+{
+	this->isMute = isMute;
+}
+
+void it_sampler::processBlock(float* outl, float* outr, int length)
 {
 	if (smpHead->is16Bit)	processBlockAnyType<int16_t>(outl, outr, length);
 	else					processBlockAnyType<int8_t>(outl, outr, length);

@@ -13,9 +13,30 @@ it_handle hit;
 std::vector<it_pattern> patTest;
 it_sampler smpTest;
 it_instrument insTest;
-int16_t bufl[wavlen / 2];
-int16_t bufr[wavlen / 2];
+it_player playTest;
+float bufl[wavlen / 2];
+float bufr[wavlen / 2];
 
+std::string noteToString(int note)
+{
+	std::string str = "";
+	if (note % 12 == 0) str = "C-";
+	if (note % 12 == 1) str = "C#";
+	if (note % 12 == 2) str = "D-";
+	if (note % 12 == 3) str = "D#";
+	if (note % 12 == 4) str = "E-";
+	if (note % 12 == 5) str = "F-";
+	if (note % 12 == 6) str = "F#";
+	if (note % 12 == 7) str = "G-";
+	if (note % 12 == 8) str = "G#";
+	if (note % 12 == 9) str = "A-";
+	if (note % 12 == 10) str = "A#";
+	if (note % 12 == 11) str = "B-";
+	char tmp[8];
+	sprintf(tmp, "%s%d", str.c_str(), note / 12);
+	str = tmp;
+	return str;
+}
 int vk_note()
 {
 	if (GetAsyncKeyState('Z'))return 0;
@@ -95,8 +116,8 @@ int main()
 			int insN;
 			std::cin >> insN;
 			printf("playing ins%d...\n", insN);
-			insTest.setRelease();
 			insTest.setInstrument(&hit, insN);
+			insTest.setRelease();
 			for (int j = 0; j < 256; ++j)GetAsyncKeyState(j);//清空一下
 			for (;;)
 			{

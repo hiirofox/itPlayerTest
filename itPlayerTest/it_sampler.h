@@ -18,7 +18,7 @@ private:
 	bool isMute = 0;
 	int loopMode;			//loopģʽ 0:off 1:on 2:bidi
 	int loopState;
-	template<typename sample_type> void processBlockAnyType(int16_t* outl, int16_t* outr, int length);
+	template<typename sample_type> void processBlockAnyType(float* outl, float* outr, int length);
 public:
 	it_sampler();
 	int setSample(it_handle* hit, int sampleNum);
@@ -26,5 +26,6 @@ public:
 	void setNoteOn();
 	void setRelease();
 	void setPitch(float note);
-	void processBlock(int16_t* outl, int16_t* outr, int length);
+	void setMute(bool isMute);
+	void processBlock(float* outl, float* outr, int length);
 };

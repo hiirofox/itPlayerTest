@@ -23,6 +23,22 @@ void it_instrument::setFilterParam(int ctof, int reso)
 	this->ctof = 130.82498201149443 * pow(1.0293015223785236, ctof) / 5600.0;
 	this->reso = 0.9 * reso / 256.0;
 }
+
+void it_instrument::setNoteCut()
+{
+	sampler.setMute(1);
+}
+
+void it_instrument::setVolume(float volume)
+{
+	this->volume = volume / 64.0;
+}
+
+void it_instrument::setUnUse(bool isUnUse)
+{
+	this->isUnUse = isUnUse;
+}
+
 void it_instrument::resetNote()
 {
 	//printf("reset ins\n");
@@ -33,6 +49,9 @@ void it_instrument::resetNote()
 	volEnve.resetNote();
 	panEnve.resetNote();
 	pitchEnve.resetNote();
+	sampler.setMute(0);
+	filtL.reset();
+	filtR.reset();
 }
 
 void it_instrument::setNoteOn()
@@ -50,6 +69,12 @@ void it_instrument::setRelease()
 	volEnve.setRelease();
 	panEnve.setRelease();
 	pitchEnve.setRelease();
+	
+	
+	//if (ins->fadeOut == 0)
+	//{
+	//	sampler.setMute(1);
+	//}
 }
 
 void it_instrument::setPitch(float note)
@@ -71,11 +96,25 @@ void it_instrument::setInstrument(it_handle* hit, int instrumentNum)
 	panEnve.setEnvelope(&ins->panEnve);
 	pitchEnve.setEnvelope(&ins->pitchEnve);
 
+	resetNote();
+	sampler.setMute(1);
+
+	setVolume(63);
+
+	isUnUse = 0;
 }
 
-void it_instrument::processBlock(int16_t* outl, int16_t* outr, int length)
+void it_instrument::processBlock(float* outl, float* outr, int length)
 {//我先不管那么多，把每个block当成一个tick，后边track就要考虑很多了
-
+	if (ins == NULL)
+	{
+		for (int i = 0; i < length; ++i)
+		{
+			outl[i] = 0;
+			outr[i] = 0;
+		}
+		return;
+	}
 	volEnve.updata();
 	panEnve.updata();
 	pitchEnve.updata();
@@ -100,15 +139,19 @@ void it_instrument::processBlock(int16_t* outl, int16_t* outr, int length)
 	//printf("pitch:%.5f %.5f\n", pitchEnve.getYPos(), pitchEnve.getYPosK());
 
 	float vol2 = vol / 64.0;
-	float volk2 = volK / length / 128.0;
+	float volk2 = volK / length / 64.0;
 	float pan2 = pan / 32.0;
 	float panK2 = panK / length / 32.0;
 	if (!isUseVolEnve)vol2 = 1.0, volk2 = 0;
-	if (!isUsePanEnve)pan2 = 0.0, panK2 = 0;
+	if (!isUsePanEnve)pan2 = (float)(ins->defaultPan - 32) / 32.0, panK2 = 0;//如果不使用pan包络就用默认pan
 	for (int i = 0; i < length; ++i)//处理音量包络
 	{
-		outl[i] *= vol2 * (1.0 - pan2) * 0.5;
-		outr[i] *= vol2 * (1.0 + pan2) * 0.5;
+		float lpan = (1.0 - pan2) * 0.5;
+		float rpan = (1.0 - pan2) * 0.5;
+		if (lpan > 1.0)lpan = 1.0;
+		if (rpan > 1.0)rpan = 1.0;
+		outl[i] *= vol2 * lpan * volume;
+		outr[i] *= vol2 * rpan * volume;
 		vol2 += volk2;
 		pan2 += panK2;
 	}
@@ -116,17 +159,13 @@ void it_instrument::processBlock(int16_t* outl, int16_t* outr, int length)
 	{
 		float ctof2 = (pitch + 32) * 2;
 		setFilterParam(ctof2, (uint8_t)ins->initFilterReso);
-		printf("ctof:%2.5f , reso:%2.5f\n", ctof, reso);
+		//printf("ctof:%2.5f , reso:%2.5f\n", ctof, reso);
 		for (int i = 0; i < length; ++i)
 		{
 			float tmpl = outl[i];
 			float tmpr = outr[i];
 			tmpl = filtL.lpf(tmpl, ctof, reso);
 			tmpr = filtR.lpf(tmpr, ctof, reso);
-			if (tmpl > 32767.0)tmpl = 32767.0;
-			if (tmpl < -32767.0)tmpl = -32767.0;
-			if (tmpr > 32767.0)tmpr = 32767.0;
-			if (tmpr < -32767.0)tmpr = -32767.0;
 			outl[i] = tmpl;
 			outr[i] = tmpr;
 		}
@@ -160,6 +199,12 @@ void it_envelope::setRelease()
 
 void it_envelope::updata()
 {
+	if (env == NULL)
+	{
+		yPos = 0;
+		yPosK = 0;
+		return;
+	}
 	if (!env->isUseEnve)
 	{
 		yPos = 0;
@@ -212,6 +257,7 @@ void it_envelope::updata()
 void it_envelope::setEnvelope(ItInstrument::it_envelope* env)
 {
 	this->env = env;
+	/*
 	printf("\nisUseEnv:%s isUseLoop:%s isUseSusLoop:%s nodesNum:%2d\n",
 		env->isUseEnve ? "true " : "false",
 		env->isUseLoop ? "true " : "false",
@@ -226,6 +272,7 @@ void it_envelope::setEnvelope(ItInstrument::it_envelope* env)
 	{
 		printf("-nodeNum%3d: Y:%3d , Tick:%3d\n", i, env->nodes[i].yPos, env->nodes[i].tickPos);
 	}
+	*/
 }
 
 float it_envelope::getYPos()
