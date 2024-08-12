@@ -9,7 +9,7 @@
 #define TickToSampleNum(tempo) (2.5 / tempo * SampleRate) //计算一个tick的采样数
 
 
-class it_envelope//诶呀it放我一马
+class it_envelope//因为好像envelope只有在instrument用到所以我懒得另外分开了
 {
 private:
 	ItInstrument::it_envelope* env;
@@ -28,6 +28,15 @@ public:
 	int getNodeN();
 };
 
+class it_filter
+{
+private:
+	float tmp1, out1;
+public:
+	float lpf(float vin, float ctof, float reso);
+	void reset();
+};
+
 class tracker_instrument
 {
 private:
@@ -41,13 +50,16 @@ private:
 	int isSampleOK;
 	ItInstrument::it_instrument* ins;
 	uint8_t kbTable[256];
-	int initNote;//起始音符
 	float note;//用来调Pitch的
 	bool isNoteOn = 0;
 
 	it_envelope volEnve;
 	it_envelope panEnve;
 	it_envelope pitchEnve;
+
+	it_filter filtL, filtR;
+	float ctof, reso;
+	void setFilterParam(int ctof, int reso);//ctof:0-127(ZXX效果器) reso:0-127
 public:
 	it_instrument();
 	void resetNote();
