@@ -8,9 +8,10 @@
 #include "WaveOutDef.h"
 
 #define MaxChannel 64
+#define MaxRowPerChannel 200
 std::string noteToString(int note);
 
-typedef struct IT_PATTERN_UNIT
+typedef struct IT_ROW_DATA
 {
 	int16_t row;
 	int8_t note;
@@ -23,8 +24,7 @@ typedef struct IT_PATTERN_UNIT
 	bool isInsChange;
 	bool isVolChange;
 	bool isCmdChange;
-}it_pattern_row;
-typedef std::vector<it_pattern_row> channel_data;
+}it_row_data;
 
 class tracker_pattern
 {
@@ -35,9 +35,14 @@ public:
 class it_pattern :public tracker_pattern
 {
 private:
+	int rowCount;
+	int channelCount;
 	int patternNum;
-	channel_data patternData[64];
+	it_row_data patternData[64][MaxRowPerChannel];
 public:
 	void unpackPattern(it_handle* hit, int patternN);
 	void printPatternInfo(int channelNum);
+	it_row_data getRowData(int channelNum, int rowNum);
+	int getRowCount();
+	int getChannelCount();
 };

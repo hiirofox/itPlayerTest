@@ -43,8 +43,8 @@ void it_sampler::processBlockAnyType(float* outl, float* outr, int length)//test
 	int i = 0;
 	for (; i < length && pos < sampleLen; ++i)
 	{
-		outl[i] = volume * datl[(int)pos];
-		outr[i] = volume * datr[(int)pos];
+		outl[i] = volume * datl[(uint32_t)pos];
+		outr[i] = volume * datr[(uint32_t)pos];
 
 		if (isIntoLoop)//如果是在循环里面，考虑的事情就很多了
 		{
@@ -122,7 +122,7 @@ void it_sampler::setRelease()
 }
 void it_sampler::setPitch(float note)
 {
-	speed = powf(2.0f, (note - 12) / 12.0f);
+	speed = powf(2.0f, (note - 12 * 5) / 12.0f);
 	speed *= (float)smpHead->C5Speed / SampleRate;
 	//printf("speed:%.5f\n", speed);
 }
@@ -134,6 +134,12 @@ void it_sampler::setMute(bool isMute)
 
 void it_sampler::processBlock(float* outl, float* outr, int length)
 {
-	if (smpHead->is16Bit)	processBlockAnyType<int16_t>(outl, outr, length);
-	else					processBlockAnyType<int8_t>(outl, outr, length);
+	if (smpHead->is16Bit)
+	{
+		processBlockAnyType<int16_t>(outl, outr, length);
+	}
+	else
+	{
+		processBlockAnyType<int8_t>(outl, outr, length);
+	}
 }

@@ -20,7 +20,7 @@ it_instrument::it_instrument()
 
 void it_instrument::setFilterParam(int ctof, int reso)
 {
-	this->ctof = 130.82498201149443 * pow(1.0293015223785236, ctof) / 5600.0;
+	this->ctof = 130.82498201149443 * pow(1.0293015223785236, ctof) / 8192.0;
 	this->reso = 0.9 * reso / 256.0;
 }
 
@@ -37,6 +37,12 @@ void it_instrument::setVolume(float volume)
 void it_instrument::setUnUse(bool isUnUse)
 {
 	this->isUnUse = isUnUse;
+}
+
+int it_instrument::getNewNoteAction()
+{
+	if (ins == NULL)return 5;
+	return ins->newNoteAction;
 }
 
 void it_instrument::resetNote()
@@ -69,12 +75,12 @@ void it_instrument::setRelease()
 	volEnve.setRelease();
 	panEnve.setRelease();
 	pitchEnve.setRelease();
-	
-	
-	//if (ins->fadeOut == 0)
-	//{
-	//	sampler.setMute(1);
-	//}
+
+
+	if (ins->fadeOut == 0)
+	{
+		sampler.setMute(1);
+	}
 }
 
 void it_instrument::setPitch(float note)

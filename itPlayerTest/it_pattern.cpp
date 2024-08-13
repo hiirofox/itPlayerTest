@@ -1,7 +1,15 @@
 #include "it_pattern.h"
 
+#define GET_NOTE(mask)    ((mask) & 1 || (mask) & 16)
+#define GET_INSTRUMENT(mask) ((mask) & 2 || (mask) & 32)
+#define GET_VOLUME(mask)  ((mask) & 4 || (mask) & 64)
+#define GET_COMMAND(mask) ((mask) & 8 || (mask) & 128)
+
 void it_pattern::unpackPattern(it_handle* hit, int patternN)
 {
+	rowCount = hit->itPatternHead[patternN].rowCount;
+	channelCount = 0;
+	printf("rowCount:%3d channelCount:%3d\n", rowCount, channelCount);
 	patternNum = patternN;
 	uint8_t* pdat = (uint8_t*)hit->itPatternData[patternN].patternData;
 	int maxChn = -1999999;
@@ -19,49 +27,65 @@ void it_pattern::unpackPattern(it_handle* hit, int patternN)
 	memset(lastCmd, 0, sizeof(lastCmd));
 	memset(lastCmdValue, 0, sizeof(lastCmdValue));
 	//printf("\npattern%2d:\n", patternN);
-	for (int row = 0, pos = 0; row < hit->itPatternHead->rowCount; ++row)
+	for (int row = 0, pos = 0; row < hit->itPatternHead[patternN].rowCount; ++row)
 	{
 		uint8_t chnMask = pdat[pos++];
 		while (chnMask > 0)
 		{
-			bool isNoteChange = 0;
-			bool isInsChange = 0;
-			bool isVolChange = 0;
-			bool isCmdChange = 0;
+			it_row_data tmp;
+			tmp.isNoteChange = 1;
+			tmp.isInsChange = 1;
+			tmp.isVolChange = 1;
+			tmp.isCmdChange = 1;
+
 
 			uint8_t chn = (chnMask - 1) & 63;
+			if (channelCount < chn)channelCount = chn;
 			if (chnMask & (1 << 7)) lastMask[chn] = pdat[pos++];
 
-			if (lastMask[chn] & (1 << 0)) lastNote[chn] = pdat[pos++], isNoteChange = 1;
-			else if (lastMask[chn] & (1 << 4)) isNoteChange = 0;
-
-			if (lastMask[chn] & (1 << 1)) lastInstrument[chn] = pdat[pos++], isInsChange = 1;
-			else if (lastMask[chn] & (1 << 5)) isInsChange = 0;
-
-			if (lastMask[chn] & (1 << 2)) lastVolume[chn] = pdat[pos++], isVolChange = 1;
-			else if (lastMask[chn] & (1 << 6)) isVolChange = 0;
-
-			if (lastMask[chn] & (1 << 3))
+			if (lastMask[chn] & (1 << 0))///////////////////////////////////////////////////
 			{
-				lastCmd[chn] = pdat[pos++];
-				lastCmdValue[chn] = pdat[pos++];
-				isCmdChange = 1;
+				lastNote[chn] = pdat[pos++];
+				tmp.note = lastNote[chn];
 			}
-			else if (lastMask[chn] & (1 << 7))
+			else if (lastMask[chn] & (1 << 4))
 			{
-				isCmdChange = 0;
+				tmp.note = lastNote[chn];
 			}
-			chnMask = pdat[pos++];
+			else
+			{
+				tmp.isNoteChange = 0;
+			}
 
-			it_pattern_row tmp;
-			tmp.row = row;
-			tmp.note = lastNote[chn];
-			tmp.isNoteChange = isNoteChange;
-			tmp.instrument = lastInstrument[chn];
-			tmp.isInsChange = isInsChange;
+			if (lastMask[chn] & (1 << 1))///////////////////////////////////////////////////
+			{
+				lastInstrument[chn] = pdat[pos++];
+				tmp.instrument = lastInstrument[chn];
+			}
+			else if (lastMask[chn] & (1 << 5))
+			{
+				tmp.instrument = lastInstrument[chn];
+			}
+			else
+			{
+				tmp.isInsChange = 0;
+			}
 
-			uint8_t vol = lastVolume[chn];
+			uint8_t vol = 64;
 			char volcmd = 'v';
+			if (lastMask[chn] & (1 << 2))///////////////////////////////////////////////////
+			{
+				lastVolume[chn] = pdat[pos++];
+				vol = lastVolume[chn];
+			}
+			else if (lastMask[chn] & (1 << 6))
+			{
+				vol = lastVolume[chn];
+			}
+			else
+			{
+				tmp.isVolChange = 0;
+			}
 			if (vol > 64)//逆天it之vol还包各种指令
 			{
 				if (vol < 75)						volcmd = 'a', vol -= 65;
@@ -76,11 +100,28 @@ void it_pattern::unpackPattern(it_handle* hit, int patternN)
 			tmp.vol = vol;
 			tmp.volCmd = volcmd;
 
-			tmp.isVolChange = isVolChange;
-			tmp.cmd = lastCmd[chn];
-			tmp.cmdValue = lastCmdValue[chn];
-			tmp.isCmdChange = isCmdChange;
-			patternData[chn].push_back(tmp);
+			if (lastMask[chn] & (1 << 3))///////////////////////////////////////////////////
+			{
+				lastCmd[chn] = pdat[pos++];
+				lastCmdValue[chn] = pdat[pos++];
+				tmp.cmd = lastCmd[chn];
+				tmp.cmdValue = lastCmdValue[chn];
+			}
+			else if (lastMask[chn] & (1 << 7))
+			{
+				tmp.cmd = lastCmd[chn];
+				tmp.cmdValue = lastCmdValue[chn];
+			}
+			else
+			{
+				tmp.isCmdChange = 0;
+			}
+			chnMask = pdat[pos++];
+
+			tmp.row = row;
+
+
+			patternData[chn][row] = tmp;
 
 
 			/*printf("chn:%2d,row:%2d | note:%2d,inst:%2d,vol:%2d,cmd:%2d,cmdv:%2d\n",
@@ -98,8 +139,9 @@ void it_pattern::unpackPattern(it_handle* hit, int patternN)
 void it_pattern::printPatternInfo(int channelNum)
 {
 	printf("pattern:%2d channel:%2d:\n", patternNum, channelNum);
-	for (auto unit : patternData[channelNum - 1])
+	for (int i = 0; i < rowCount; ++i)
 	{
+		it_row_data unit = patternData[channelNum - 1][i];
 		printf("row:%3d mask:%d,%d,%d,%d | ", unit.row, unit.isNoteChange, unit.isInsChange, unit.isVolChange, unit.isCmdChange);
 
 		if (unit.isNoteChange)//note
@@ -132,4 +174,19 @@ void it_pattern::printPatternInfo(int channelNum)
 
 		printf("\n");
 	}
+}
+
+it_row_data it_pattern::getRowData(int channelNum, int rowNum)
+{
+	return patternData[channelNum - 1][rowNum];
+}
+
+int it_pattern::getRowCount()
+{
+	return rowCount;
+}
+
+int it_pattern::getChannelCount()
+{
+	return channelCount;
 }

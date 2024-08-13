@@ -73,5 +73,6 @@ public:
 	void setPitch(float note);
 	void setVolume(float volume);//0->64
 	void setInstrument(it_handle* hit, int instrumentNum);
+	int getNewNoteAction();
 	void processBlock(float* outl, float* outr, int length);
 };
