@@ -94,8 +94,8 @@ int main()
 				smpTest.processBlock(bufl, bufr, wavlen / 2);
 				for (int i = 0; i < wavlen; i += 2)
 				{
-					wavbuf[i + 0] = bufl[i / 2] * 32768;
-					wavbuf[i + 1] = bufr[i / 2] * 32768;
+					wavbuf[i + 0] = bufl[i / 2] * 16384;
+					wavbuf[i + 1] = bufr[i / 2] * 16384;
 				}
 				int key = vk_note();
 				if (key == -1) break;
@@ -122,8 +122,8 @@ int main()
 				insTest.processBlock(bufl, bufr, wavlen / 2);
 				for (int i = 0; i < wavlen; i += 2)
 				{
-					wavbuf[i + 0] = bufl[i / 2] * 32768;
-					wavbuf[i + 1] = bufr[i / 2] * 32768;
+					wavbuf[i + 0] = bufl[i / 2] * 16384;
+					wavbuf[i + 1] = bufr[i / 2] * 16384;
 				}
 				int key = vk_note();
 				if (key == -1) break;

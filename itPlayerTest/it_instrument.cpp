@@ -20,7 +20,7 @@ it_instrument::it_instrument()
 
 void it_instrument::setFilterParam(int ctof, int reso)
 {
-	this->ctof = 130.82498201149443 * pow(1.0293015223785236, ctof) / 8192.0;
+	this->ctof = 130.82498201149443 * pow(1.0293015223785236, ctof) / 7200.0;
 	this->reso = 0.9 * reso / 256.0;
 }
 
@@ -58,6 +58,9 @@ void it_instrument::resetNote()
 	sampler.setMute(0);
 	filtL.reset();
 	filtR.reset();
+	printf("randPan:%d randVol:%d\n", ins->randomPanVariation, ins->randomVolumeVariation);
+	randPan = (float)(rand() % 10000) / 10000.0 * (rand() % 2 ? 1 : -1) * (float)ins->randomPanVariation / 64.0;
+	randVol = 1.0 + (float)(rand() % 10000) / 10000.0 * (rand() % 2 ? 1 : -1) * (float)ins->randomVolumeVariation / 16.0;
 }
 
 void it_instrument::setNoteOn()
@@ -149,15 +152,18 @@ void it_instrument::processBlock(float* outl, float* outr, int length)
 	float pan2 = pan / 32.0;
 	float panK2 = panK / length / 32.0;
 	if (!isUseVolEnve)vol2 = 1.0, volk2 = 0;
-	if (!isUsePanEnve)pan2 = (float)(ins->defaultPan - 32) / 32.0, panK2 = 0;//如果不使用pan包络就用默认pan
+	if (!isUsePanEnve)pan2 = 0.0, panK2 = 0;//如果不使用pan包络就用默认pan
+	//printf("pan:%.5f\n", pan2);
 	for (int i = 0; i < length; ++i)//处理音量包络
 	{
-		float lpan = (1.0 - pan2) * 0.5;
-		float rpan = (1.0 - pan2) * 0.5;
-		if (lpan > 1.0)lpan = 1.0;
-		if (rpan > 1.0)rpan = 1.0;
-		outl[i] *= vol2 * lpan * volume;
-		outr[i] *= vol2 * rpan * volume;
+		float lpan = 1.0 - pan2 - randPan;
+		float rpan = 1.0 + pan2 + randPan;
+		if (lpan < 0.0)lpan = 0.0;
+		else if (lpan > 2.0)lpan = 1.0;
+		if (rpan < 0.0)rpan = 0.0;
+		else if (rpan > 2.0)rpan = 1.0;
+		outl[i] *= vol2 * lpan * volume * randVol;
+		outr[i] *= vol2 * rpan * volume * randVol;
 		vol2 += volk2;
 		pan2 += panK2;
 	}

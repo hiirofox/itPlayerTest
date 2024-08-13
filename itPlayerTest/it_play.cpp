@@ -1,5 +1,8 @@
 #include "it_play.h"
 
+///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+float _BufferL[MaxBufferLength];
+float _BufferR[MaxBufferLength];
 
 it_channel::it_channel()
 {
@@ -8,6 +11,8 @@ it_channel::it_channel()
 	{
 		ins->setUnUse(1);
 	}
+	bufl = _BufferL;
+	bufr = _BufferR;
 }
 
 void it_channel::setItHandle(it_handle* hit)

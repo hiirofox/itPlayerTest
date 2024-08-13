@@ -12,7 +12,8 @@ class it_sampler
 private:
 	ItSample::it_sample_head* smpHead;
 	ItSample::it_sample_data* smpData;
-	float pos, speed;
+	float pos, speed, vibrato, vibratoTime;
+	
 	bool isNoteOn = 0;
 	bool isIntoLoop = 0;	//在各种loop里了
 	bool isMute = 0;

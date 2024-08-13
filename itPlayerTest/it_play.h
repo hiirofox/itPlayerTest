@@ -22,8 +22,8 @@ private:
 	it_handle* hit;
 	it_instrument ins[MaxInsPerChannel];
 	int insPos;
-	float bufl[MaxBufferLength];
-	float bufr[MaxBufferLength];
+	float *bufl;
+	float *bufr;
 
 	int lastNote, lastVol, lastIns, lastCmd, lastCmdV;
 public:

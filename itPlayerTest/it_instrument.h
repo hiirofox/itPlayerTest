@@ -62,6 +62,7 @@ private:
 	float ctof, reso;
 	void setFilterParam(int ctof, int reso);//ctof:0-127(ZXXĞ§¹ûÆ÷) reso:0-127
 
+	float randPan, randVol;
 	float volume;
 public:
 	it_instrument();

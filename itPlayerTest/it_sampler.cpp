@@ -40,39 +40,45 @@ void it_sampler::processBlockAnyType(float* outl, float* outr, int length)//test
 		loopMode = smpHead->loopMode;
 		if (!smpHead->isUseLoop)loopMode = -1;
 	}
+
+	vibrato = sinf(vibratoTime * 2.0 * 3.1415926535f) * (float)smpHead->vibratoDepth / 64.0 / 2;
+	vibratoTime += (float)smpHead->vibratoSpeed / 256;
+
 	int i = 0;
 	for (; i < length && pos < sampleLen; ++i)
 	{
 		outl[i] = volume * datl[(uint32_t)pos];
 		outr[i] = volume * datr[(uint32_t)pos];
 
+		float speedWithVibrato = speed + vibrato;
 		if (isIntoLoop)//如果是在循环里面，考虑的事情就很多了
 		{
 			if (loopMode == 0)//on是到头就重来
 			{
-				pos += speed;
-				if (pos >= loopHigh) pos = loopLow;
+				pos += speedWithVibrato;
+				//if (pos >= loopHigh) pos = loopLow;
+				if (pos >= loopHigh) pos -= loopHigh - loopLow;//这样pitch更准，因为每次归位都会有误差
 			}
 			else if (loopMode == 1)//bidi是来回
 			{
-				if (loopState == 1)			pos -= speed;//回头
-				else						pos += speed;
+				if (loopState == 1)			pos -= speedWithVibrato;//回头
+				else						pos += speedWithVibrato;
 
-				if (pos >= loopHigh)		pos -= speed, loopState = 1;
-				else if (pos <= loopLow)	pos += speed, loopState = 2;
+				if (pos >= loopHigh)		pos -= speedWithVibrato, loopState = 1;
+				else if (pos <= loopLow)	pos += speedWithVibrato, loopState = 2;
 			}
 			else//其他就当作没有
 			{
-				pos += speed;
+				pos += speedWithVibrato;
 			}
 		}
 		else//如果不在循环里面就直接前进就好了
 		{
-			if (pos >= loopLow - speed && pos <= loopHigh + speed)//两边那个-speed和+speed为了防止跑飞
+			if (pos >= loopLow - speedWithVibrato && pos <= loopHigh + speedWithVibrato)//两边那个-speedWithVibrato和+speedWithVibrato为了防止跑飞
 			{
 				isIntoLoop = 1;
 			}
-			pos += speed;
+			pos += speedWithVibrato;
 		}
 	}
 	for (; i < length; ++i)//零填充，如果pos比i提前爆了的话
@@ -85,7 +91,8 @@ void it_sampler::processBlockAnyType(float* outl, float* outr, int length)//test
 
 it_sampler::it_sampler()
 {
-
+	vibrato = 0;
+	vibratoTime = 0;
 }
 
 int it_sampler::setSample(it_handle* hit, int sampleNum)
