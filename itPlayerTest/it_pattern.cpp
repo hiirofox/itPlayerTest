@@ -9,17 +9,16 @@ void it_pattern::unpackPattern(it_handle* hit, int patternN)
 {
 	rowCount = hit->itPatternHead[patternN].rowCount;
 	channelCount = 0;
-	printf("rowCount:%3d channelCount:%3d\n", rowCount, channelCount);
 	patternNum = patternN;
 	uint8_t* pdat = (uint8_t*)hit->itPatternData[patternN].patternData;
 	int maxChn = -1999999;
 
-	uint8_t		lastMask[MaxChannel];
-	int8_t		lastNote[MaxChannel];
-	int8_t		lastInstrument[MaxChannel];
-	int8_t		lastVolume[MaxChannel];
-	int8_t		lastCmd[MaxChannel];
-	int8_t		lastCmdValue[MaxChannel];
+	uint8_t		lastMask[MaxChannelNum];
+	int8_t		lastNote[MaxChannelNum];
+	int8_t		lastInstrument[MaxChannelNum];
+	int8_t		lastVolume[MaxChannelNum];
+	int8_t		lastCmd[MaxChannelNum];
+	int8_t		lastCmdValue[MaxChannelNum];
 	memset(lastMask, 0, sizeof(lastMask));
 	memset(lastNote, 0, sizeof(lastNote));
 	memset(lastInstrument, 0, sizeof(lastInstrument));
@@ -135,6 +134,8 @@ void it_pattern::unpackPattern(it_handle* hit, int patternN)
 
 		}
 	}
+	channelCount++;
+	//printf("rowCount:%3d channelCount:%3d\n", rowCount, channelCount);
 }
 void it_pattern::printPatternInfo(int channelNum)
 {

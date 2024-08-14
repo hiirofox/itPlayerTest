@@ -50,6 +50,8 @@ private:
 	int isSampleOK;
 	ItInstrument::it_instrument* ins;
 	uint8_t kbTable[256];
+	float globalVolume, globalPan;
+	float panCtrl;//cmd控制的pan
 	float note;//用来调Pitch的
 	bool isNoteOn = 0;
 	bool isUnUse;//不使用
@@ -63,7 +65,7 @@ private:
 	void setFilterParam(int ctof, int reso);//ctof:0-127(ZXX效果器) reso:0-127
 
 	float randPan, randVol;
-	float volume;
+	float volume, fadeOutVolume,fadeOutRate;
 public:
 	it_instrument();
 	void resetNote();
@@ -71,6 +73,7 @@ public:
 	void setRelease();//===
 	void setNoteCut();//^^ 
 	void setUnUse(bool isUnUse);
+	void setPan(float pan);//0->64
 	void setPitch(float note);
 	void setVolume(float volume);//0->64
 	void setInstrument(it_handle* hit, int instrumentNum);

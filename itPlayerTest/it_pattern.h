@@ -7,7 +7,7 @@
 #include "it_file.h"
 #include "WaveOutDef.h"
 
-#define MaxChannel 64
+#define MaxChannelNum 64
 #define MaxRowPerChannel 200
 std::string noteToString(int note);
 
@@ -38,7 +38,7 @@ private:
 	int rowCount;
 	int channelCount;
 	int patternNum;
-	it_row_data patternData[64][MaxRowPerChannel];
+	it_row_data patternData[MaxChannelNum][MaxRowPerChannel];
 public:
 	void unpackPattern(it_handle* hit, int patternN);
 	void printPatternInfo(int channelNum);

@@ -41,7 +41,8 @@ void it_sampler::processBlockAnyType(float* outl, float* outr, int length)//test
 		if (!smpHead->isUseLoop)loopMode = -1;
 	}
 
-	vibrato = sinf(vibratoTime * 2.0 * 3.1415926535f) * (float)smpHead->vibratoDepth / 64.0 / 2;
+	vibrato = sinf(vibratoTime * 2.0 * 3.1415926535f) * (float)smpHead->vibratoDepth / 1024.0;
+	//vibrato = 0;
 	vibratoTime += (float)smpHead->vibratoSpeed / 256;
 
 	int i = 0;

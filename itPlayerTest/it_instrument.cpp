@@ -38,10 +38,15 @@ void it_instrument::setUnUse(bool isUnUse)
 {
 	this->isUnUse = isUnUse;
 }
+void it_instrument::setPan(float pan)
+{
+	this->panCtrl = pan / 32.0 - 1.0;
+}
 
 int it_instrument::getNewNoteAction()
 {
 	if (ins == NULL)return 5;
+	if (isUnUse)return 5;
 	return ins->newNoteAction;
 }
 
@@ -49,6 +54,7 @@ void it_instrument::resetNote()
 {
 	//printf("reset ins\n");
 	isNoteOn = 1;
+	if (isUnUse)return;
 	if (sampler.setSample(hit, kbTable[(int)note]) == -1) isSampleOK = 0;
 	else isSampleOK = 1;
 	sampler.resetNote();
@@ -58,9 +64,10 @@ void it_instrument::resetNote()
 	sampler.setMute(0);
 	filtL.reset();
 	filtR.reset();
-	printf("randPan:%d randVol:%d\n", ins->randomPanVariation, ins->randomVolumeVariation);
+	//printf("randPan:%d randVol:%d\n", ins->randomPanVariation, ins->randomVolumeVariation);
 	randPan = (float)(rand() % 10000) / 10000.0 * (rand() % 2 ? 1 : -1) * (float)ins->randomPanVariation / 64.0;
 	randVol = 1.0 + (float)(rand() % 10000) / 10000.0 * (rand() % 2 ? 1 : -1) * (float)ins->randomVolumeVariation / 16.0;
+	fadeOutVolume = 1.0;
 }
 
 void it_instrument::setNoteOn()
@@ -75,11 +82,13 @@ void it_instrument::setRelease()
 {
 	//printf("release\n");
 	isNoteOn = 0;
+	if (isUnUse)return;
 	volEnve.setRelease();
 	panEnve.setRelease();
 	pitchEnve.setRelease();
 
 
+	if (ins == NULL)return;
 	if (ins->fadeOut == 0)
 	{
 		sampler.setMute(1);
@@ -95,6 +104,8 @@ void it_instrument::setInstrument(it_handle* hit, int instrumentNum)
 {
 	this->hit = hit;
 	ins = &hit->itInstruments[instrumentNum - 1];
+	if (ins == NULL)return;
+
 	memset(kbTable, -1, sizeof(kbTable));
 	for (int i = 0; i < 120; ++i)
 	{
@@ -110,12 +121,21 @@ void it_instrument::setInstrument(it_handle* hit, int instrumentNum)
 
 	setVolume(63);
 
+	globalPan = 0;
+	globalVolume = (float)ins->globalVolume / 64.0;
+
 	isUnUse = 0;
+	//printf("ins:%d fadeOut:%d\n",instrumentNum, ins->fadeOut);
+	if (ins->fadeOut == 0)fadeOutRate = 0;
+	else
+	{
+		fadeOutRate = 1.0 / (1024.0 / ins->fadeOut);
+	}
 }
 
 void it_instrument::processBlock(float* outl, float* outr, int length)
 {//我先不管那么多，把每个block当成一个tick，后边track就要考虑很多了
-	if (ins == NULL)
+	if (ins == NULL || isUnUse)
 	{
 		for (int i = 0; i < length; ++i)
 		{
@@ -147,6 +167,12 @@ void it_instrument::processBlock(float* outl, float* outr, int length)
 	//printf("vol:%2.5f volk:%2.5f\n", vol, volK);
 	//printf("pitch:%.5f %.5f\n", pitchEnve.getYPos(), pitchEnve.getYPosK());
 
+	if (!isNoteOn)
+	{
+		fadeOutVolume -= fadeOutRate;
+		if (fadeOutVolume < 0)fadeOutVolume = 0;
+	}
+
 	float vol2 = vol / 64.0;
 	float volk2 = volK / length / 64.0;
 	float pan2 = pan / 32.0;
@@ -154,16 +180,26 @@ void it_instrument::processBlock(float* outl, float* outr, int length)
 	if (!isUseVolEnve)vol2 = 1.0, volk2 = 0;
 	if (!isUsePanEnve)pan2 = 0.0, panK2 = 0;//如果不使用pan包络就用默认pan
 	//printf("pan:%.5f\n", pan2);
+	float totalVol = volume * randVol * globalVolume * fadeOutVolume;
+	if (fabs(totalVol) <= 0.000001)
+	{
+		for (int i = 0; i < length; ++i)
+		{
+			outl[i] = 0;
+			outr[i] = 0;
+		}
+		return;
+	}
 	for (int i = 0; i < length; ++i)//处理音量包络
 	{
-		float lpan = 1.0 - pan2 - randPan;
-		float rpan = 1.0 + pan2 + randPan;
+		float lpan = 1.0 + pan2 + randPan + panCtrl + globalPan;
+		float rpan = 1.0 - pan2 - randPan - panCtrl - globalPan;
 		if (lpan < 0.0)lpan = 0.0;
 		else if (lpan > 2.0)lpan = 1.0;
 		if (rpan < 0.0)rpan = 0.0;
 		else if (rpan > 2.0)rpan = 1.0;
-		outl[i] *= vol2 * lpan * volume * randVol;
-		outr[i] *= vol2 * rpan * volume * randVol;
+		outl[i] *= vol2 * lpan * totalVol;
+		outr[i] *= vol2 * rpan * totalVol;
 		vol2 += volk2;
 		pan2 += panK2;
 	}
@@ -269,6 +305,7 @@ void it_envelope::updata()
 void it_envelope::setEnvelope(ItInstrument::it_envelope* env)
 {
 	this->env = env;
+	tickPos = 0;
 	/*
 	printf("\nisUseEnv:%s isUseLoop:%s isUseSusLoop:%s nodesNum:%2d\n",
 		env->isUseEnve ? "true " : "false",

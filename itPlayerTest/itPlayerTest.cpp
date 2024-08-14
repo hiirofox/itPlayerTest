@@ -5,8 +5,8 @@
 #include "it_play.h"
 #include "WaveOut.h"
 
-#define wavlen (SampleRate/16)
-WaveOut hwo(48000, wavlen * sizeof(int32_t));
+#define wavlen (SampleRate/6)
+WaveOut hwo(SampleRate, wavlen * sizeof(int32_t));
 int32_t wavbuf[wavlen];
 
 it_handle hit;
@@ -72,7 +72,7 @@ int vk_note()
 }
 int main()
 {
-	itReadFromFile(&hit, "..\\test\\laamaa_-_wb22-wk21.it");
+	itReadFromFile(&hit, "..\\test\\fod_ohclatenightearlymorningjam.it");
 
 
 	hwo.Start();
@@ -204,6 +204,22 @@ int main()
 					}
 					hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
 				}
+				int key = vk_note();
+				if (key == -1) break;
+			}
+		}
+		if (cmd == "play")
+		{
+			playTest.open(&hit);
+			for (;;)
+			{
+				playTest.processBlock(bufl, bufr, wavlen / 2);
+				for (int i = 0; i < wavlen; i += 2)
+				{
+					wavbuf[i + 0] = bufl[i / 2] * 4800;
+					wavbuf[i + 1] = bufr[i / 2] * 4800;
+				}
+				hwo.PlayAudio((char*)wavbuf, wavlen * sizeof(int32_t));
 				int key = vk_note();
 				if (key == -1) break;
 			}
